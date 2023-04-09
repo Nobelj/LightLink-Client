@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    body {
+        background-color: darkslategrey;
+    }
+    #devwrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        position: absolute;
+        transition: all ease-in-out 1s 1s;
+    }
+    #devnum {
+        font-size: 200px;
+        color:white;
+    }
+    #netinfo {
+        z-index: 100;
+        position: absolute;
+    }
+    @keyframes pulse {
+        0% {
+            filter: opacity(0);
+        }   
+        1% {
+            filter: opacity(1);
+        }   
+        70% {
+            filter: opacity(1);
+        }   
+        100% {
+            filter: opacity(0);
+        }   
+    }
+</style>
+<script>
+    let deviceID = 0;
+    let socket  = null; 
+    function getNetworkDetails() {
+        let ip = document.getElementById('ip').value;
+        let port = document.getElementById('port').value;
+        connectToSocket(ip, port);
+        let form = document.getElementById('netinfo');
+        form.style.display = 'none';
+    }
+
+    function changeMode(mode) {
+        let devnum = document.getElementById('devnum');
+        if(mode == '1') {
+            devnum.innerHTML = '1';
+        } else if(mode == '2') {
+            devnum.innerHTML = '2';
+        } else if(mode == '3') {
+            devnum.innerHTML = '3';
+        } else if(mode == '4') {
+            devnum.innerHTML = '4';
+        } else {
+            devnum.innerHTML = '';
+        }
+        devnum.style.animation = 'pulse 5s both';
+        setTimeout(function() {
+            devnum.style.animation = '';
+        }, 5000);
+    }
+
+    function connectToSocket(ip, port) {
+        socket = new WebSocket('ws://'+ip+':'+port); 
+        socket.onerror = (error) => {
+            console.log('Error cannot find WebSocket:', error);
+            socket.close();
+        };
+
+        socket.onopen = () => {
+            console.log('WebSocket connected');
+            socket.send('Hello from the phone!');
+        };
+
+        socket.onmessage = (event) => {
+            console.log('Received message:', event.data);
+            checkData(event.data);
+        };
+
+        socket.onclose = () => {
+            console.log('WebSocket closed');
+            setTimeout(function() {
+                connectToSocket(ip, port);
+            }, 1000);
+        };
+    }
+    function checkData(data)  {
+        if(data.split(':')[0] == 'DeviceID') {
+            deviceID = data.split(':')[1];
+            console.log('Device ID assigned: ' + deviceID);
+        }
+        if(data.split(':')[0] == 'Mode') {
+            mode = data.split(':')[1];
+            changeMode(data.split(':')[1]);
+            console.log('Mode assigned: ' + mode);
+        }
+    }
+
+</script>
+<body>
+    <div id="devwrap"><div id="devnum"></div></div>
+    
+    <div id="netinfo">
+        <form>
+            <label for="ip">IP:</label><br>
+            <input type="text" id="ip" name="ip"><br>
+            <label for="port">Port:</label><br>
+            <input type="text" id="port" name="port"><br>
+        </form>
+        <button onclick="getNetworkDetails()">Submit</button>
+    </div>
+</body>
+</html>
